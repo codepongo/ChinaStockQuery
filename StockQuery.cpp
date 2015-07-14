@@ -7,56 +7,25 @@
 #include <string>
 #include <iostream>
 #include <iomanip>
-using namespace std;
-
+#include <unordered_map>
+#include <ostream>
 
 #include <windows.h>
 #include <wininet.h>
-
-//http://blog.sina.com.cn/s/blog_a459dcf50101obn0.html
-
-#define MAXSIZE 1024
-
 #pragma comment(lib, "Wininet.lib")
 
-void urlopen_szzs();
+#include "IniParser.h"
 
-void set_top_most() {
-    // GetConsoleWindow() => returns:
-    // "handle to the window used by the console
-    // associated with the calling process
-    // or NULL
-    // if there is no such associated console."
-    HWND consoleWindowHandle = GetConsoleWindow();
+using namespace std;
 
-    if (consoleWindowHandle) {
-        cout << endl << "Setting up associated console window ON TOP !";
-        SetWindowPos(
-            consoleWindowHandle, // window handle
-            HWND_TOPMOST, // "handle to the window to precede
-            // the positioned window in the Z order
-            // OR one of the following:"
-            // HWND_BOTTOM or HWND_NOTOPMOST or HWND_TOP or HWND_TOPMOST
-            0, 0, // X, Y position of the window (in client coordinates)
-            0, 0, // cx, cy => width & height of the window in pixels
-            SWP_DRAWFRAME | SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW // The window sizing and positioning flags.
-        );
-        // OPTIONAL ! - SET WINDOW'S "SHOW STATE"
-        ShowWindow(
-            consoleWindowHandle, // window handle
-            SW_NORMAL // how the window is to be shown
-            // SW_NORMAL => "Activates and displays a window.
-            // If the window is minimized or maximized,
-            // the system restores it to its original size and position.
-            // An application should specify this flag
-            // when displaying the window for the first time."
-        );
-        cout << endl << "Done.";
-    }
-}
+std::unordered_map<std::string, std::string> g_index_string_map;
 
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#define MAXSIZE 1024
 
 typedef struct StockInfo {
+    std::string index_id;
     std::string name;
     std::string today_open_price;
     std::string yesterday_close_price;
@@ -94,8 +63,103 @@ typedef struct StockInfo {
 };
 
 
+void urlopen_szzs();
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+std::wstring s2ws(const std::string& str) {
+    int size_needed = MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), NULL, 0);
+    std::wstring wstrTo(size_needed, 0);
+    MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), &wstrTo[0], size_needed);
+    return wstrTo;
+}
+
+std::string ws2s(const std::wstring& wstr) {
+    int size_needed = WideCharToMultiByte(CP_UTF8, 0, &wstr[0], -1, 0, 0, 0, 0);
+    std::string strTo(size_needed, 0);
+    WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), &strTo[0], size_needed, NULL, NULL);
+    return strTo;
+}
+
+
+void set_top_most()
+{
+    // GetConsoleWindow() => returns:
+    // "handle to the window used by the console
+    // associated with the calling process
+    // or NULL
+    // if there is no such associated console."
+    HWND consoleWindowHandle = GetConsoleWindow();
+
+    if (consoleWindowHandle){
+        cout << endl << "Setting up associated console window ON TOP !";
+        SetWindowPos(
+            consoleWindowHandle, // window handle
+            HWND_TOPMOST, // "handle to the window to precede
+            // the positioned window in the Z order
+            // OR one of the following:"
+            // HWND_BOTTOM or HWND_NOTOPMOST or HWND_TOP or HWND_TOPMOST
+            0, 0, // X, Y position of the window (in client coordinates)
+            0, 0, // cx, cy => width & height of the window in pixels
+            SWP_DRAWFRAME | SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW // The window sizing and positioning flags.
+            );
+        // OPTIONAL ! - SET WINDOW'S "SHOW STATE"
+        ShowWindow(
+            consoleWindowHandle, // window handle
+            SW_NORMAL // how the window is to be shown
+            // SW_NORMAL => "Activates and displays a window.
+            // If the window is minimized or maximized,
+            // the system restores it to its original size and position.
+            // An application should specify this flag
+            // when displaying the window for the first time."
+            );
+        cout << endl << "Done.";
+    }
+}
+
+
+void LoadStockToQuery(/*out*/std::vector<std::string>& stock_id_list)
+{
+    IniParser myparser;
+    char str[100] = { 0 };
+    try {
+        myparser.Load("config.ini");
+        std::string strValue;
+        for (int i = 0; i < 100; ++i)
+        {
+            sprintf_s(str, "id%d", i);
+            myparser.QueryKeyValue<std::string>("STOCK_ID", str, strValue);
+            stock_id_list.push_back(strValue);
+        }
+    }
+    catch (IniParseException &e) {
+        //std::cout << e.what();
+    }
+}
+
+
+void LoadStockIndexStringMap(const std::vector<std::string>& stock_id_list)
+{
+    IniParser myparser;
+    char str[100] = { 0 };
+    try {
+        myparser.Load("config.ini");
+        std::string strValue;
+        for (auto i: stock_id_list)
+        {
+            myparser.QueryKeyValue<std::string>("STOCK_MAP", i, strValue);
+            g_index_string_map.insert(std::make_pair(i, strValue));
+        }
+    }
+    catch (IniParseException &e) {
+        //std::cout << e.what();
+    }
+}
+
+
+
 void urlopen(_TCHAR*);
-std::string GetSubBtFind(std::string&);
+std::string GetSubBtFind(std::string&, std::string&);
 
 
 int Token(const char* pSep, char* pStr, StockInfo& stock_info);
@@ -105,11 +169,29 @@ void print_stock_info(StockInfo& stock_info);
 int _tmain(int argc, _TCHAR* argv[]) {
     set_top_most();
 
+    // change console window size
+    system("mode CON: COLS=120");
+
+    std::vector<std::string> stock_id_list;
+    LoadStockToQuery(stock_id_list);
+    LoadStockIndexStringMap(stock_id_list);
+
+    std::string query_str = "http://hq.sinajs.cn/list=";
+    for (auto i : stock_id_list)
+    {
+        query_str += i;
+        query_str += ",";
+    }
+
+    query_str.erase(query_str.end() - 1);
+
     char exit_code = 1;
     while (exit_code != 'q') {
         cout.flush();
         system("cls");
-        urlopen(_T("http://hq.sinajs.cn/list=sh600718,sh600895,sz000002"));
+
+        urlopen(const_cast<TCHAR*>(s2ws(query_str).c_str()));
+        //urlopen(_T("http://hq.sinajs.cn/list=sh600718,sh600895,sz000002"));
         //urlopen(_T("http://hq.sinajs.cn/list=sh600895"));
         //urlopen(_T("http://hq.sinajs.cn/list=sz000002"));
         urlopen_szzs();
@@ -138,12 +220,14 @@ void urlopen(_TCHAR* url) {
 
             std::string strAll = Temp;
             while (strAll.length() >= 10) {
-                std::string str = GetSubBtFind(strAll);
+
+                std::string index_id;
+                std::string str = GetSubBtFind(strAll, index_id);
                 char szpstr[1024];
                 strcpy_s(szpstr, str.c_str());
-                std::vector<char*> vec;
 
                 StockInfo info;
+                info.index_id = index_id;
                 if (0 == Token(",", szpstr, info)) {
                     print_stock_info(info);
                 }
@@ -198,10 +282,13 @@ void urlopen_szzs() {
 }
 
 
-std::string GetSubBtFind(std::string& scrStr) {
+std::string GetSubBtFind(std::string& scrStr, std::string& index_id) {
+                
     std::string str_temp = "";
     int len = scrStr.length();
     int beginPos = scrStr.find("\"");
+    int index_pos = beginPos - 9;
+    index_id = scrStr.substr(index_pos, 8);
     scrStr = scrStr.substr(beginPos + 1, len);
     int endPos = scrStr.find("\"");
 
@@ -210,20 +297,6 @@ std::string GetSubBtFind(std::string& scrStr) {
     return str_temp;
 }
 
-
-std::wstring s2ws(const std::string& str) {
-    int size_needed = MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), NULL, 0);
-    std::wstring wstrTo(size_needed, 0);
-    MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), &wstrTo[0], size_needed);
-    return wstrTo;
-}
-
-std::string ws2s(const std::wstring& wstr) {
-    int size_needed = WideCharToMultiByte(CP_UTF8, 0, &wstr[0], -1, 0, 0, 0, 0);
-    std::string strTo(size_needed, 0);
-    WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), &strTo[0], size_needed, NULL, NULL);
-    return strTo;
-}
 
 int Token(const char* pSep, char* pStr, StockInfo& stock_info) {
     if (strlen(pStr) == 0) {
@@ -271,27 +344,29 @@ int Token(const char* pSep, char* pStr, StockInfo& stock_info) {
 
 
 void print_stock_info(StockInfo& stock_info) {
-    if (0 == stock_info.name.compare("东软集团"))
-        std::cout << std::left << setw(8) << "drjt ";
-    else if (0 == stock_info.name.compare("张江高科"))
-        std::cout << std::left << setw(8) << "zjgk ";
-    else
-        std::cout << std::left << setw(8) << "wk   ";
+    auto it = g_index_string_map.find(stock_info.index_id);
+    std::string name_str = it->second;
+    std::cout << std::left << setw(8) << name_str;
 
-    std::cout << std::left << setw(10) <<  stock_info.cur_price;
+    std::cout << std::left << setw(10) << stock_info.cur_price;
+    std::cout << std::left << setw(10) << "C-" + stock_info.yesterday_close_price;
+    std::cout << std::left << setw(10) << "O-" + stock_info.today_open_price;
 
-    std::cout << std::left << setw(20) << stock_info.today_open_price + "/"
-              + stock_info.today_highest_price
-              + "/" + stock_info.today_lowest_price;
-
-    //std::cout << std::left << setw(8) << "C-" + stock_info.yesterday_close_price;
-
+    std::ostringstream os;
+    os << stock_info.today_highest_price << "/" << stock_info.today_lowest_price << " ";
+    std::cout << std::left << setw(16) << os.str();
     //std::cout << std::left << setw(8) << stock_info.buy_1_price;
     //std::cout << std::left << setw(8) << stock_info.sell_1_price;
     //std::cout << std::left << setw(8) << stock_info.executed_shares;
     //std::cout << std::left << setw(8) << stock_info.executed_money;
 
-    std::cout << std::left << setw(15) << "B-" + stock_info.buy_1_price_dup + "/" + stock_info.buy_1_number ;
+    std::ostringstream os1;
+    os1 << "B-" + stock_info.buy_1_number << "/" + stock_info.buy_1_price_dup << " ";
+    std::cout << std::left << setw(16) << os1.str();
+
+    std::ostringstream os2;
+    os2 << "S-" + stock_info.sell_1_number << "/" + stock_info.sell_1_price_dup << " ";
+    std::cout << std::left << setw(16) << os2.str();
 
     //std::cout << std::left << setw(8) << stock_info.buy_2_number;
     //std::cout << std::left << setw(8) << stock_info.buy_2_price;
@@ -301,8 +376,6 @@ void print_stock_info(StockInfo& stock_info) {
     //std::cout << std::left << setw(8) << stock_info.buy_4_price;
     //std::cout << std::left << setw(8) << stock_info.buy_5_number;
     //std::cout << std::left << setw(8) << stock_info.buy_5_price;
-
-    std::cout << std::left << setw(15) << "S-" + stock_info.sell_1_price_dup + "/" + stock_info.sell_1_number ;
 
     //std::cout << std::left << setw(8) << stock_info.sell_2_number;
     //std::cout << std::left << setw(8) << stock_info.sell_2_price;
@@ -315,7 +388,7 @@ void print_stock_info(StockInfo& stock_info) {
     //std::cout << std::left << setw(8) << stock_info.date;
     //std::cout << std::left << setw(8) << stock_info.time;
 
-    double f = 100 * (atof(stock_info.cur_price.c_str()) - atof(stock_info.today_open_price.c_str())) / atof(stock_info.today_open_price.c_str());
-    std::cout << std::left << setw(10) << f;
+    double f = 100 * (atof(stock_info.cur_price.c_str()) - atof(stock_info.yesterday_close_price.c_str())) / atof(stock_info.yesterday_close_price.c_str());
+    std::cout << std::left << setw(8) << f;
     cout << endl;
 }
