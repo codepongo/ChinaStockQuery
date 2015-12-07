@@ -63,9 +63,9 @@ typedef struct StockInfo {
 };
 
 
-void urlopen_szzs();
-
-
+//void urlopen_szzs();
+//void urlopen_hs300();
+void urlopen_zs(std::string& code, std::string& name);
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 std::wstring s2ws(const std::string& str) {
     int size_needed = MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), NULL, 0);
@@ -167,7 +167,7 @@ void print_stock_info(StockInfo& stock_info);
 
 
 int _tmain(int argc, _TCHAR* argv[]) {
-    set_top_most();
+    //set_top_most();
 
     // change console window size
     system("mode CON: COLS=120");
@@ -194,8 +194,14 @@ int _tmain(int argc, _TCHAR* argv[]) {
         //urlopen(_T("http://hq.sinajs.cn/list=sh600718,sh600895,sz000002"));
         //urlopen(_T("http://hq.sinajs.cn/list=sh600895"));
         //urlopen(_T("http://hq.sinajs.cn/list=sz000002"));
-        urlopen_szzs();
-        Sleep(7700);
+        //urlopen_szzs();
+		//urlopen_hs300();
+		urlopen_zs(std::string("sh000300"), std::string("hs300"));
+		urlopen_zs(std::string("sh000001"), std::string("szzs"));
+		urlopen_zs(std::string("sz399001"), std::string("szcz"));
+		urlopen_zs(std::string("sz399005"), std::string("zxbz"));
+		urlopen_zs(std::string("sz399006"), std::string("cybz"));
+		Sleep(7700);
     }
 
     system("pause");
@@ -242,44 +248,145 @@ void urlopen(_TCHAR* url) {
         hSession = NULL;
     }
 }
+void urlopen_zs(std::string& code, std::string& name) {
+	HINTERNET hSession = InternetOpen(_T("UrlTest"), INTERNET_OPEN_TYPE_PRECONFIG, NULL, NULL, 0);
+	if (hSession != NULL) {
+		std::string url = "http://hq.sinajs.cn/list=s_";
+		url += code;
+		HINTERNET hHttp = InternetOpenUrlA(hSession, url.c_str(), NULL, 0, INTERNET_FLAG_DONT_CACHE, 0);
+		if (hHttp != NULL) {
+			//wprintf_s(_T("%s\n"), url);
+			char Temp[MAXSIZE];
+			ULONG Number = 1;
+			InternetReadFile(hHttp, Temp, MAXSIZE - 1, &Number);
+			Temp[Number] = '\0';
 
+			std::string str = Temp;
+			char* context = NULL;
+			char* outer = strtok_s(Temp, ",", &context);
+			//std::cout << outer << std::endl;
+			//std::string name = outer; // s2ws(outer);
+			std::string cur_index = strtok_s(NULL, ",", &context);
+			std::string cur_price = strtok_s(NULL, ",", &context);
+			std::string cur_zdl = strtok_s(NULL, ",", &context);
+			std::string cur_cjs = strtok_s(NULL, ",", &context);
+			std::string cur_cje = strtok_s(NULL, ",", &context);
+			
+			// init
+			HANDLE h = GetStdHandle(STD_OUTPUT_HANDLE);
+			WORD wOldColorAttrs;
+			CONSOLE_SCREEN_BUFFER_INFO csbiInfo;
+			// Save the current color  
+			GetConsoleScreenBufferInfo(h, &csbiInfo);
+			wOldColorAttrs = csbiInfo.wAttributes;
 
+			// Set the new color 
+			if (atof(cur_zdl.c_str()) < 0.00) {
+				SetConsoleTextAttribute(h, FOREGROUND_GREEN| FOREGROUND_INTENSITY);
+			}
+			else {
+				SetConsoleTextAttribute(h, FOREGROUND_RED | FOREGROUND_INTENSITY);
+			}
 
-void urlopen_szzs() {
-    HINTERNET hSession = InternetOpen(_T("UrlTest"), INTERNET_OPEN_TYPE_PRECONFIG, NULL, NULL, 0);
-    if (hSession != NULL) {
-        HINTERNET hHttp = InternetOpenUrl(hSession, _T("http://hq.sinajs.cn/list=s_sh000001"), NULL, 0, INTERNET_FLAG_DONT_CACHE, 0);
-        if (hHttp != NULL) {
-            //wprintf_s(_T("%s\n"), url);
-            char Temp[MAXSIZE];
-            ULONG Number = 1;
-            InternetReadFile(hHttp, Temp, MAXSIZE - 1, &Number);
-            Temp[Number] = '\0';
+			//std::cout << std::left << setw(10) << std::string(name);
+			std::cout << std::left << setw(8) << name;
+			float f = std::stof(cur_zdl);
 
-            std::string str = Temp;
-            char* context = NULL;
-            char* outer = strtok_s(Temp, ",", &context);
-            //std::cout << outer << std::endl;
-            std::string name = outer; // s2ws(outer);
-            std::string cur_index = strtok_s(NULL, ",", &context);
-            std::string cur_price = strtok_s(NULL, ",", &context);
-            std::string cur_zdl = strtok_s(NULL, ",", &context);
-            std::string cur_cjs = strtok_s(NULL, ",", &context);
-            std::string cur_cje = strtok_s(NULL, ",", &context);
+			if (f >= 0.00) {
+				cur_zdl = std::string("+") + cur_zdl;
+			}
+			cur_zdl += "%";
+			std::cout << std::left << setw(10) << cur_zdl;
+			std::cout << std::left << setw(10) << cur_index;
+			std::cout << std::left << setw(10) << cur_price;
+			std::cout << std::left << setw(10) << cur_cjs;
+			std::cout << std::endl;
+			// Restore the original color  
+			SetConsoleTextAttribute(h, wOldColorAttrs);
 
-            std::cout << std::left << setw(10) << cur_index;
-            std::cout << std::left << setw(10) << cur_price;
-            std::cout << std::left << setw(10) << cur_zdl;
-            std::cout << std::left << setw(10) << cur_cjs;
+			InternetCloseHandle(hHttp);
+			hHttp = NULL;
 
-            InternetCloseHandle(hHttp);
-            hHttp = NULL;
-
-        }
-        InternetCloseHandle(hSession);
-        hSession = NULL;
-    }
+		}
+		InternetCloseHandle(hSession);
+		hSession = NULL;
+	}
 }
+
+//void urlopen_hs300() {
+//	HINTERNET hSession = InternetOpen(_T("UrlTest"), INTERNET_OPEN_TYPE_PRECONFIG, NULL, NULL, 0);
+//	if (hSession != NULL) {
+//		HINTERNET hHttp = InternetOpenUrl(hSession, _T("http://hq.sinajs.cn/list=s_sh000300"), NULL, 0, INTERNET_FLAG_DONT_CACHE, 0);
+//		if (hHttp != NULL) {
+//			//wprintf_s(_T("%s\n"), url);
+//			char Temp[MAXSIZE];
+//			ULONG Number = 1;
+//			InternetReadFile(hHttp, Temp, MAXSIZE - 1, &Number);
+//			Temp[Number] = '\0';
+//
+//			std::string str = Temp;
+//			char* context = NULL;
+//			char* outer = strtok_s(Temp, ",", &context);
+//			//std::cout << outer << std::endl;
+//			std::string name = outer; // s2ws(outer);
+//			std::string cur_index = strtok_s(NULL, ",", &context);
+//			std::string cur_price = strtok_s(NULL, ",", &context);
+//			std::string cur_zdl = strtok_s(NULL, ",", &context);
+//			std::string cur_cjs = strtok_s(NULL, ",", &context);
+//			std::string cur_cje = strtok_s(NULL, ",", &context);
+//
+//			std::cout << std::left << setw(10) << "hs300";
+//			std::cout << std::left << setw(10) << cur_index;
+//			std::cout << std::left << setw(10) << cur_price;
+//			std::cout << std::left << setw(10) << cur_zdl;
+//			std::cout << std::left << setw(10) << cur_cjs;
+//			std::cout << std::endl;
+//
+//			InternetCloseHandle(hHttp);
+//			hHttp = NULL;
+//
+//		}
+//		InternetCloseHandle(hSession);
+//		hSession = NULL;
+//	}
+//}
+//
+//void urlopen_szzs() {
+//    HINTERNET hSession = InternetOpen(_T("UrlTest"), INTERNET_OPEN_TYPE_PRECONFIG, NULL, NULL, 0);
+//    if (hSession != NULL) {
+//        HINTERNET hHttp = InternetOpenUrl(hSession, _T("http://hq.sinajs.cn/list=s_sh000001"), NULL, 0, INTERNET_FLAG_DONT_CACHE, 0);
+//        if (hHttp != NULL) {
+//            //wprintf_s(_T("%s\n"), url);
+//            char Temp[MAXSIZE];
+//            ULONG Number = 1;
+//            InternetReadFile(hHttp, Temp, MAXSIZE - 1, &Number);
+//            Temp[Number] = '\0';
+//
+//            std::string str = Temp;
+//            char* context = NULL;
+//            char* outer = strtok_s(Temp, ",", &context);
+//            //std::cout << outer << std::endl;
+//            std::string name = outer; // s2ws(outer);
+//            std::string cur_index = strtok_s(NULL, ",", &context);
+//            std::string cur_price = strtok_s(NULL, ",", &context);
+//            std::string cur_zdl = strtok_s(NULL, ",", &context);
+//            std::string cur_cjs = strtok_s(NULL, ",", &context);
+//            std::string cur_cje = strtok_s(NULL, ",", &context);
+//
+//            std::cout << std::left << setw(10) << cur_index;
+//            std::cout << std::left << setw(10) << cur_price;
+//            std::cout << std::left << setw(10) << cur_zdl;
+//            std::cout << std::left << setw(10) << cur_cjs;
+//			std::cout << std::endl;
+//
+//            InternetCloseHandle(hHttp);
+//            hHttp = NULL;
+//
+//        }
+//        InternetCloseHandle(hSession);
+//        hSession = NULL;
+//    }
+//}
 
 
 std::string GetSubBtFind(std::string& scrStr, std::string& index_id) {
@@ -346,8 +453,35 @@ int Token(const char* pSep, char* pStr, StockInfo& stock_info) {
 void print_stock_info(StockInfo& stock_info) {
     auto it = g_index_string_map.find(stock_info.index_id);
     std::string name_str = it->second;
-    std::cout << std::left << setw(8) << name_str;
+	double f = 0.00;
+	if (stock_info.cur_price.compare("0.00") != 0) {
+		f = 100 * (atof(stock_info.cur_price.c_str()) - atof(stock_info.yesterday_close_price.c_str())) / atof(stock_info.yesterday_close_price.c_str());
+	}
+	// init
+	HANDLE h = GetStdHandle(STD_OUTPUT_HANDLE);
+	WORD wOldColorAttrs;
+	CONSOLE_SCREEN_BUFFER_INFO csbiInfo;
 
+	// Save the current color  
+	GetConsoleScreenBufferInfo(h, &csbiInfo);
+	wOldColorAttrs = csbiInfo.wAttributes;
+
+	// Set the new color 
+	if (f < 0.00) {
+		SetConsoleTextAttribute(h, FOREGROUND_GREEN | FOREGROUND_INTENSITY);
+	}
+	else {
+		SetConsoleTextAttribute(h, FOREGROUND_RED | FOREGROUND_INTENSITY);
+	}
+	std::cout << std::left << setw(8) << name_str;
+	std::ostringstream out;
+	out << std::setprecision(2) << f;
+	std::string percent = out.str();
+	if (f >= 0.00) {
+		percent = std::string("+") + percent;
+	}
+	percent = percent + "%";
+	std::cout << std::left << setw(10) << percent;
     std::cout << std::left << setw(10) << stock_info.cur_price;
     std::cout << std::left << setw(10) << "C-" + stock_info.yesterday_close_price;
     std::cout << std::left << setw(10) << "O-" + stock_info.today_open_price;
@@ -388,7 +522,9 @@ void print_stock_info(StockInfo& stock_info) {
     //std::cout << std::left << setw(8) << stock_info.date;
     //std::cout << std::left << setw(8) << stock_info.time;
 
-    double f = 100 * (atof(stock_info.cur_price.c_str()) - atof(stock_info.yesterday_close_price.c_str())) / atof(stock_info.yesterday_close_price.c_str());
-    std::cout << std::left << setw(8) << f;
+
     cout << endl;
+	// Restore the original color  
+	SetConsoleTextAttribute(h, wOldColorAttrs);
+
 }

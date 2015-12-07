@@ -5,3 +5,9 @@
 *.ilk
 *.htm
 *.idb
+Debug/
+ipch/
+*.swp
+*.aps
+*.opensdf
+*.sdf
