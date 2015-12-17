@@ -22,7 +22,7 @@ std::unordered_map<std::string, std::string> g_index_string_map;
 
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#define MAXSIZE 1024
+#define MAXSIZE 1024*10
 
 typedef struct StockInfo {
     std::string index_id;
