@@ -6,6 +6,7 @@
 *.htm
 *.idb
 Debug/
+Release/StockQuery.tlog/
 ipch/
 *.swp
 *.aps
