@@ -170,11 +170,13 @@ int _tmain(int argc, _TCHAR* argv[]) {
     //set_top_most();
 
     // change console window size
-    system("mode CON: COLS=120");
 
     std::vector<std::string> stock_id_list;
     LoadStockToQuery(stock_id_list);
     LoadStockIndexStringMap(stock_id_list);
+	char cmd[1024] = { 0 };
+	sprintf_s(cmd, "mode CON: COLS=120 LINES=%d", stock_id_list.size()+6);
+	system(cmd);
 
     std::string query_str = "http://hq.sinajs.cn/list=";
     for (auto i : stock_id_list)
