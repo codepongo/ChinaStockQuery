@@ -472,60 +472,33 @@ void print_stock_info(StockInfo& stock_info) {
 	if (f < 0.00) {
 		SetConsoleTextAttribute(h, FOREGROUND_GREEN | FOREGROUND_INTENSITY);
 	}
-	else {
+	else if (f > 0.00) {
 		SetConsoleTextAttribute(h, FOREGROUND_RED | FOREGROUND_INTENSITY);
 	}
-	std::cout << std::left << setw(8) << name_str;
-	std::ostringstream out;
-	out << std::setprecision(2) << f;
-	std::string percent = out.str();
-	if (f >= 0.00) {
-		percent = std::string("+") + percent;
+	char sign[2] = "";
+	if (f >= 0.00)
+	{
+		sign[0] = '+';
 	}
-	percent = percent + "%";
-	std::cout << std::left << setw(10) << percent;
-    std::cout << std::left << setw(10) << stock_info.cur_price;
-    std::cout << std::left << setw(10) << "C-" + stock_info.yesterday_close_price;
-    std::cout << std::left << setw(10) << "O-" + stock_info.today_open_price;
+	char percent[100] = { 0 };
+	snprintf(percent, 100, "%s%.2f%%", sign, f);
+	char high_low[1024] = { 0 };
+	snprintf(high_low, 1024, "%s/%s", stock_info.today_highest_price.c_str(), stock_info.today_lowest_price.c_str());
+	char order[1024] = { 0 };
+	snprintf(order, 1024, "B-%s/%s", stock_info.buy_1_number.c_str(), stock_info.buy_1_price_dup.c_str());
+	char bid[1024] = { 0 };
+	snprintf(bid, 1024, "S-%s/%s", stock_info.sell_1_number.c_str(), stock_info.sell_1_price_dup.c_str());
 
-    std::ostringstream os;
-    os << stock_info.today_highest_price << "/" << stock_info.today_lowest_price << " ";
-    std::cout << std::left << setw(16) << os.str();
-    //std::cout << std::left << setw(8) << stock_info.buy_1_price;
-    //std::cout << std::left << setw(8) << stock_info.sell_1_price;
-    //std::cout << std::left << setw(8) << stock_info.executed_shares;
-    //std::cout << std::left << setw(8) << stock_info.executed_money;
-
-    std::ostringstream os1;
-    os1 << "B-" + stock_info.buy_1_number << "/" + stock_info.buy_1_price_dup << " ";
-    std::cout << std::left << setw(16) << os1.str();
-
-    std::ostringstream os2;
-    os2 << "S-" + stock_info.sell_1_number << "/" + stock_info.sell_1_price_dup << " ";
-    std::cout << std::left << setw(16) << os2.str();
-
-    //std::cout << std::left << setw(8) << stock_info.buy_2_number;
-    //std::cout << std::left << setw(8) << stock_info.buy_2_price;
-    //std::cout << std::left << setw(8) << stock_info.buy_3_number;
-    //std::cout << std::left << setw(8) << stock_info.buy_3_price;
-    //std::cout << std::left << setw(8) << stock_info.buy_4_number;
-    //std::cout << std::left << setw(8) << stock_info.buy_4_price;
-    //std::cout << std::left << setw(8) << stock_info.buy_5_number;
-    //std::cout << std::left << setw(8) << stock_info.buy_5_price;
-
-    //std::cout << std::left << setw(8) << stock_info.sell_2_number;
-    //std::cout << std::left << setw(8) << stock_info.sell_2_price;
-    //std::cout << std::left << setw(8) << stock_info.sell_3_number;
-    //std::cout << std::left << setw(8) << stock_info.sell_3_price;
-    //std::cout << std::left << setw(8) << stock_info.sell_4_number;
-    //std::cout << std::left << setw(8) << stock_info.sell_4_price;
-    //std::cout << std::left << setw(8) << stock_info.sell_5_number;
-    //std::cout << std::left << setw(8) << stock_info.sell_5_price;
-    //std::cout << std::left << setw(8) << stock_info.date;
-    //std::cout << std::left << setw(8) << stock_info.time;
-
-
-    cout << endl;
+	printf("%-8s%-10s%-10sC-%-8sO-%-8s%-16s%-16s%-16s\n",
+		name_str.c_str(),
+		percent,
+		stock_info.cur_price.c_str(),
+		stock_info.yesterday_close_price.c_str(),
+		stock_info.today_open_price.c_str(),
+		high_low,
+		order,
+		bid
+	);
 	// Restore the original color  
 	SetConsoleTextAttribute(h, wOldColorAttrs);
 
